@@ -34,10 +34,6 @@ foundations_london_housing_2022_2025_20260810T013626Z.csv
 *.log
 reports/generated/
 
-# Locally generated presentation build artifacts and demo decks
-.pptx-build/
-deliverables/*.pptx
-
 # Cloned legacy projects are local references, not application dependencies.
 references/
 .env.example
@@ -45,3 +41,4 @@ data_setup.md
 LEGACY_REUSE.md
 config/codex.toml
 Docs/plan.md
+.pptx-build
