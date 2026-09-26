@@ -154,8 +154,11 @@ def test_other_providers_keep_system_message():
     assert [message["role"] for message in messages] == ["system", "user"]
 
 
-def test_ultra_messages_use_plain_single_user_request():
-    assert build_ultra_messages("evidence") == [{"role": "user", "content": "evidence"}]
+def test_ultra_messages_preserve_grounding_on_every_retry():
+    messages = build_ultra_messages("evidence")
+    assert messages[0]["role"] == "user"
+    assert SYSTEM_PROMPT in messages[0]["content"]
+    assert messages[0]["content"].endswith("evidence")
 
 
 def test_print_llm_context_excludes_credentials(capsys):

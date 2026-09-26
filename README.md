@@ -4,6 +4,47 @@ SiteWise UK is a map-first planning and property screening tool. A user selects 
 
 The first prototype uses direct public APIs for local-plan and national constraint data. It does **not** require downloading all London Local Plan GeoPackages.
 
+## Run the council-guidance demo
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe scripts\run_demo.py --prompt-hf-token
+```
+
+Enter your Hugging Face token at the hidden prompt, then open http://127.0.0.1:8000.
+The token lives only in that process. The web demo **never reads or writes `.env`**.
+Omit `--prompt-hf-token` to run without AI. Model/provider defaults are Phi-4-mini-instruct
+and featherless-ai; provider access/credits are still required. Set process variables
+`HF_MODEL` / `HF_PROVIDER` to change them. `.env.example` documents all settings but
+is not automatically loaded by the web server. Restart the server after code changes.
+
+Try map point **51.47914, -0.16682**, proposal **rear extension and two new homes**.
+The demo now returns council passages and source-based design checks before requesting
+an AI explanation. Open “Read the council evidence” for the actual extract, PDF page,
+document-age warning and source. Missing AI credentials do not prevent policy retrieval.
+
+Current policy-text pilot: **Wandsworth, Westminster and Lambeth**, plus selected
+London-wide policies. This is not UK-wide policy coverage or a complete Local Plan
+assessment. Unsupported councils, changed documents and unavailable sources are explicit.
+Boundary lookup verifies an administrative district, not special development-corporation
+jurisdiction. An old SPD must not be treated as current legislation. Tree policy does
+not establish the presence or protected status of any particular tree.
+
+The explanation uses a bounded context, inline evidence IDs and a citation-ID check.
+This checks citation existence, not whether every sentence is legally/semantically correct.
+Reports with missing policy citations, empty output or provider failure are not shown as
+successful reports. Truncated responses are labelled incomplete. Screens expire after
+30 minutes; only 16 are retained in memory. This unauthenticated server is a local demo,
+not a public deployment.
+
+```powershell
+# Public-source diagnostic: does not read .env or use an LLM
+.\.venv\Scripts\python.exe scripts\check_policies.py
+.\.venv\Scripts\python.exe -m pytest tests -q
+```
+
+See [Docs/COUNCIL_POLICY.md](Docs/COUNCIL_POLICY.md) for retrieval and report design.
+
 ## Current data sources
 
 - Supplied London planning application CSV: `foundations_london_housing_2022_2025_20260810T013626Z.csv`

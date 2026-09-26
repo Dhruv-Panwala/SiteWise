@@ -1,7 +1,6 @@
 """Small demo server for the SiteWise map interface.
 
-It exposes deterministic evidence only. LLM reporting remains an explicit CLI
-step, so the demo stays usable even when an inference provider is unavailable.
+Evidence is returned first; optional explanations use only server-stored evidence.
 """
 from __future__ import annotations
 
@@ -9,6 +8,8 @@ from dataclasses import replace
 import json
 from pathlib import Path
 import re
+import time
+from uuid import uuid4
 from threading import Lock
 from urllib.parse import quote
 
@@ -19,6 +20,7 @@ from .config import ROOT, Settings
 from .evidence import EvidenceService
 from .planning import ensure_prepared, validate_coordinates
 from .similarity import ComparableCaseIndex
+from .llm import generate_report
 
 
 POSTCODE_PATTERN = re.compile(r"^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$", re.IGNORECASE)
@@ -33,6 +35,8 @@ class SiteWiseDemo:
         self._applications = None
         self._index = None
         self._lock = Lock()
+        self._screens = {}
+        self._report_lock = Lock()
 
     def _load(self) -> tuple:
         with self._lock:
@@ -99,12 +103,32 @@ class SiteWiseDemo:
         include_gla = bool(payload.get("include_gla", True))
         radius_m = min(max(float(payload.get("radius_m", 1000)), 100), 5000)
         apps, index = self._load()
-        settings = replace(self.settings, enable_gla_arcgis=include_gla)
+        settings = replace(self.settings, enable_gla_arcgis=include_gla, enable_council_policies=True)
         evidence = EvidenceService(apps, index, settings=settings).analyze(
             lat, lon, description=description, radius_m=radius_m, top_n=5,
         )
         # Ensure NumPy/Pandas values cannot leak into the browser response.
-        return json.loads(json.dumps(evidence, ensure_ascii=False, default=str))
+        evidence = json.loads(json.dumps(evidence, ensure_ascii=False, default=str))
+        identity = uuid4().hex
+        with self._lock:
+            self._screens = {k: v for k, v in self._screens.items() if time.monotonic() - v[0] < 1800}
+            while len(self._screens) >= 16:
+                self._screens.pop(next(iter(self._screens)))
+            self._screens[identity] = (time.monotonic(), evidence)
+        return {**evidence, "evidence_id": identity}
+
+    def explain(self, identity):
+        # No browser-supplied context or URLs reach the LLM or retrieval layer.
+        with self._report_lock:
+            with self._lock:
+                record = self._screens.get(identity)
+            if not record or time.monotonic() - record[0] >= 1800:
+                raise ValueError("This screen expired. Screen the site again to explain its evidence.")
+            evidence = record[1]
+            if "llm_report" not in evidence:
+                evidence["llm_report"] = generate_report(evidence, self.settings) if self.settings.enable_llm_reports else {
+                    "status": "disabled", "text": None, "message": "AI explanation is disabled; the sourced council guidance below is still available."}
+            return evidence["llm_report"]
 
 
 def create_app(root: Path = ROOT, demo: SiteWiseDemo | None = None) -> Flask:
@@ -118,7 +142,18 @@ def create_app(root: Path = ROOT, demo: SiteWiseDemo | None = None) -> Flask:
 
     @app.get("/api/health")
     def health():
-        return jsonify({"status": "ok", "service": "SiteWise UK demo", "llm_enabled": False})
+        settings = getattr(demo, "settings", None)
+        return jsonify({"status": "ok", "service": "SiteWise UK demo", "llm_enabled": bool(settings and settings.enable_llm_reports and settings.hf_token)})
+
+    @app.post("/api/explain")
+    def explain():
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or not isinstance(payload.get("evidence_id"), str):
+            return jsonify({"error": "Provide the evidence_id from a completed site screen."}), 400
+        try:
+            return jsonify(demo.explain(payload["evidence_id"]))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
 
     @app.get("/api/geocode")
     def geocode():

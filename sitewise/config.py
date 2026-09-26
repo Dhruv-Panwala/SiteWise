@@ -36,6 +36,8 @@ class Settings:
     hf_max_description_chars: int
     hf_max_input_chars: int
     enable_gla_arcgis: bool = False
+    enable_council_policies: bool = False
+    enable_llm_reports: bool = True
     arcgis_services_base: str = "https://services.arcgis.com/drifeOPKLpgnJ8Qa/arcgis/rest/services"
 
     @classmethod
@@ -56,12 +58,14 @@ class Settings:
             hf_token=os.getenv("HF_TOKEN") or None,
             hf_model=os.getenv("HF_MODEL", "microsoft/Phi-4-mini-instruct"),
             hf_provider=os.getenv("HF_PROVIDER", "featherless-ai"),
-            hf_max_new_tokens=int(os.getenv("HF_MAX_NEW_TOKENS", "450")),
+            hf_max_new_tokens=int(os.getenv("HF_MAX_NEW_TOKENS", "800")),
             hf_temperature=float(os.getenv("HF_TEMPERATURE", "0.2")),
             hf_max_nearby_cases=int(os.getenv("HF_MAX_NEARBY_CASES", "4")),
             hf_max_similar_cases=int(os.getenv("HF_MAX_SIMILAR_CASES", "3")),
             hf_max_description_chars=int(os.getenv("HF_MAX_DESCRIPTION_CHARS", "320")),
             hf_max_input_chars=int(os.getenv("HF_MAX_INPUT_CHARS", "12000")),
             enable_gla_arcgis=os.getenv("ENABLE_GLA_ARCGIS", "false").lower() in {"1", "true", "yes"},
+            enable_council_policies=os.getenv("ENABLE_COUNCIL_POLICIES", "false").lower() in {"1", "true", "yes"},
+            enable_llm_reports=os.getenv("ENABLE_LLM_REPORTS", "true").lower() in {"1", "true", "yes"},
             arcgis_services_base=os.getenv("ARCGIS_SERVICES_BASE", "https://services.arcgis.com/drifeOPKLpgnJ8Qa/arcgis/rest/services").rstrip("/"),
         )

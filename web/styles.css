@@ -2,6 +2,18 @@
 * { box-sizing:border-box; }
 /* Component display rules must not reveal panels hidden by the application. */
 [hidden] { display:none !important; }
+.option-row .toggle + .toggle { margin-top:10px; }
+.policy-card { border-top:3px solid var(--teal); }
+.policy-rule { padding:16px 0; border-bottom:1px solid var(--line); }
+.policy-rule:last-child { border-bottom:0; }
+.policy-rule h4 { margin:5px 0; font-size:15px; }
+.policy-rule p { margin:6px 0; color:var(--muted); }
+.policy-label { font-size:11px; font-weight:700; color:var(--teal-dark); }
+.policy-rule details, .policy-details { margin-top:10px; font-size:12px; }
+summary { cursor:pointer; color:var(--teal-dark); font-weight:650; }
+blockquote { margin:12px 0; padding:12px; border-left:3px solid var(--line); background:var(--ground); line-height:1.7; }
+.report-text { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.8; color:#35445a; }
+.report-sources { display:flex; flex-wrap:wrap; gap:12px; }
 /* Keep Leaflet's translated tile panes inside their own stacking context. */
 .workspace .map-wrap { overflow:hidden; isolation:isolate; }
 .map-wrap #map { position:relative; overflow:hidden; }

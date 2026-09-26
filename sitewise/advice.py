@@ -60,6 +60,8 @@ def _constraint_advice(finding: dict[str, Any]) -> dict[str, Any] | None:
         action = "Read the linked borough/local-plan policy before fixing the scheme's use, height, massing, access and housing mix."
     else:
         return None
+    if status == "historical":
+        action = "Historical designation only; verify whether it still applies before acting. If it does: " + action
     return {
         "dataset": dataset,
         "priority": "high" if dataset in {"tree-preservation-zone", "listed-building", "ancient-woodland", "site-of-special-scientific-interest"} else "medium",
@@ -148,9 +150,10 @@ def build_planning_advice(
     gap_statuses = {"unknown", "not_found", "not_available"}
     gaps = []
     gap_seen = set()
+    intersected = {x.get("dataset") for x in constraints if x.get("status") == "confirmed"}
     for finding in constraints:
         dataset = str(finding.get("dataset") or "")
-        if finding.get("status") not in gap_statuses or dataset in gap_seen:
+        if finding.get("status") not in gap_statuses or dataset in gap_seen or dataset in intersected:
             continue
         gap_seen.add(dataset)
         gaps.append({
@@ -158,7 +161,9 @@ def build_planning_advice(
             "name": finding.get("name") or dataset,
             "status": finding.get("status"),
             "source_url": finding.get("source_url"),
-            "message": finding.get("coverage_warning") or "This source did not confirm or rule out the constraint.",
+            "message": "Not verified for this site. Check the council register before finalising the design."
+                       if "disabled" in str(finding.get("coverage_warning", "")).lower()
+                       else finding.get("coverage_warning") or "This source did not confirm or rule out the constraint.",
         })
     if gaps:
         suggestions.append({

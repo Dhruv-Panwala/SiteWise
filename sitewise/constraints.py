@@ -109,7 +109,7 @@ class ConstraintApiClient:
             "name": LABELS.get(dataset, dataset),
             "severity": "unknown",
             "status": status,
-            "current": True,
+            "current": None,
             "source_url": url,
             "source_name": "Planning Data API",
             "source_date": None,
@@ -158,25 +158,35 @@ class ConstraintApiClient:
                 if raw_geometry:
                     try:
                         geometry = wkt.loads(raw_geometry) if isinstance(raw_geometry, str) else shape(raw_geometry)
+                        if not geometry.is_valid:
+                            raise ValueError("Invalid source geometry")
                         if not geometry.intersects(Point(float(lon), float(lat))):
                             continue
                         spatial_relation = "point_intersects_geometry"
                     except Exception:
                         spatial_relation = "geometry_unparsed"
                 entity_url = f"https://www.planning.data.gov.uk/entity/{entity_id}" if entity_id else url
+                ended = False
+                try:
+                    ended = datetime.fromisoformat(str(props.get("end-date"))).date() <= datetime.now(timezone.utc).date()
+                except (TypeError, ValueError):
+                    pass
+                verified = spatial_relation == "point_intersects_geometry"
                 findings.append({
                     "constraint_id": str(entity_id or f"{dataset}:{len(findings)}"),
                     "dataset": dataset,
                     "name": _entity_name(entity, dataset),
                     "severity": _severity(dataset),
-                    "status": "confirmed",
-                    "current": True,
+                    "status": ("historical" if ended else "confirmed") if verified else "unknown",
+                    "current": False if ended else None,
+                    "temporal_status": "source_marked_ended" if ended else "legal_currency_unverified",
                     "source_url": entity_url,
                     "source_name": "Planning Data API",
                     "source_date": props.get("start-date") or props.get("entry-date") or props.get("last-updated"),
                     "retrieved_at": _now(),
                     "raw_reference": props.get("reference") or props.get("reference-number") or entity_id,
-                    "coverage_warning": "Point intersects the returned geometry; use a user-drawn site polygon for full parcel screening.",
+                    "coverage_warning": "Point intersects source geometry; verify legal currency and the full site boundary."
+                                        if verified else "The returned record lacks usable geometry; no site constraint is confirmed.",
                     "spatial_relation": spatial_relation,
                     "source_status": source_status,
                 })
@@ -216,7 +226,7 @@ class GeoJSONConstraintIndex:
                 try:
                     geom = shape(geometry)
                     if not geom.is_valid:
-                        geom = geom.buffer(0)
+                        continue
                 except Exception:
                     continue
                 features.append({"dataset": dataset, "geometry": geom, "properties": feature.get("properties") or {}, "source_url": str(path)})
@@ -239,7 +249,7 @@ class GeoJSONConstraintIndex:
                 "name": str(name),
                 "severity": _severity(dataset),
                 "status": "confirmed",
-                "current": True,
+                "current": None,
                 "source_url": props.get("source_url") or item["source_url"],
                 "source_name": "Local GeoJSON constraint layer",
                 "source_date": props.get("source_date") or props.get("last_updated"),

@@ -23,12 +23,17 @@ class EvidenceService:
         settings: Settings | None = None,
         constraints: ConstraintEngine | None = None,
         local_plan_client=None,
+        policy_client=None,
     ):
         self.settings = settings or Settings.from_env()
         self.applications = applications
         self.comparable_index = comparable_index
         self.constraints = constraints or ConstraintEngine(self.settings)
         self.nearby = NearbyApplicationSearch(applications)
+        self.policy_client = policy_client
+        if self.policy_client is None and self.settings.enable_council_policies:
+            from .policies import CouncilPolicyClient
+            self.policy_client = CouncilPolicyClient(self.settings)
         self.local_plan_client = local_plan_client
         if self.local_plan_client is None and self.settings.enable_gla_arcgis:
             from .arcgis import GLALocalPlanClient
@@ -86,6 +91,19 @@ class EvidenceService:
         planning_advice = build_planning_advice(
             planning_constraints, similar, nearby, query=query,
         )
+        council_policy = None
+        if self.policy_client is not None:
+            council_policy = self.policy_client.retrieve(lat, lon, query)
+            resolved = council_policy.get("authority") or {}
+            property_record["authority_resolution"] = resolved
+            if resolved.get("status") == "boundary_verified":
+                property_record["authority"] = resolved["name"]
+            # These recommendations exist before the LLM and are independently inspectable.
+            planning_advice["suggestions"] = [{
+                "title": item["title"], "action": item["suggested_action"],
+                "priority": "medium", "basis": "retrieved_policy_text",
+                "citation_id": item["id"], "source_urls": [item["source_url"]],
+            } for item in council_policy["items"]] + planning_advice["suggestions"]
 
         data_quality = [
             {
@@ -135,6 +153,10 @@ class EvidenceService:
             }
         ]
         sources.extend(self.constraints.sources(planning_constraints))
+        if council_policy is not None:
+            sources.extend({"source_name": item["title"], "source_url": item["source_url"],
+                            "retrieved_at": item["retrieved_at"], "source_date": None}
+                           for item in council_policy["items"])
         if local_plan is not None:
             sources.extend({
                 "source_name": "GLA Local Plan ArcGIS layer",
@@ -165,4 +187,6 @@ class EvidenceService:
         }
         if local_plan is not None:
             package["local_plan"] = local_plan
+        if council_policy is not None:
+            package["council_policy"] = council_policy
         return package

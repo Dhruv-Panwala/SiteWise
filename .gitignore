@@ -34,6 +34,10 @@ foundations_london_housing_2022_2025_20260810T013626Z.csv
 *.log
 reports/generated/
 
+# Locally generated presentation build artifacts and demo decks
+.pptx-build/
+deliverables/*.pptx
+
 # Cloned legacy projects are local references, not application dependencies.
 references/
 .env.example
