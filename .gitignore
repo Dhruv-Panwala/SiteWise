@@ -1,0 +1,43 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+config/field_encryption_key
+config/secret_key
+
+# Large or generated data
+data/raw/
+data/cache/
+data/processed/
+# The current Windows workspace uses an uppercase `Data` directory.
+Data/raw/
+Data/cache/
+Data/processed/
+*.gpkg
+*.parquet
+*.sqlite
+*.db
+*.zip
+
+# Supplied local dataset (large; keep it outside Git history)
+foundations_london_housing_2022_2025_20260810T013626Z.csv
+
+# Logs and local reports
+*.log
+reports/generated/
+
+# Cloned legacy projects are local references, not application dependencies.
+references/
+.env.example
+data_setup.md
+LEGACY_REUSE.md
+config/codex.toml
+Docs/plan.md
