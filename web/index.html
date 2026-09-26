@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SiteWise UK — Planning screen</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="/styles.css?v=map-fix-1">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="SiteWise home"><span class="brand-mark">S</span><span>SiteWise <em>UK</em></span></a>
+    <div class="topbar-note"><span class="live-dot"></span> Evidence-led planning screen</div>
+  </header>
+
+  <main class="layout">
+    <aside class="control-panel">
+      <p class="eyebrow">Site screening</p>
+      <h1>See what a site needs before you design it.</h1>
+      <p class="intro">Search a UK postcode or address, or place the marker on the map. We will show local planning evidence, constraints and comparable cases.</p>
+
+      <form id="site-form">
+        <label for="search-input">Address or postcode</label>
+        <div class="search-row">
+          <input id="search-input" autocomplete="street-address" placeholder="e.g. SW1A 1AA" aria-describedby="search-help">
+          <button class="icon-button" id="search-button" type="button" aria-label="Search address">⌕</button>
+        </div>
+        <p class="field-help" id="search-help">Or click directly on the map.</p>
+        <div id="search-results" class="search-results" aria-live="polite"></div>
+
+        <div class="coordinate-row" id="coordinate-row"><span>Selected site</span><strong id="coordinates">Choose a location</strong></div>
+
+        <label for="description">What are you considering?</label>
+        <textarea id="description" rows="5" placeholder="For example: replace an existing house with two homes and a rear extension"></textarea>
+
+        <div class="option-row">
+          <label class="toggle"><input id="include-gla" type="checkbox" checked><span></span> Check GLA local-plan layers</label>
+        </div>
+        <button class="primary-button" id="analyse-button" type="submit"><span>Screen this site</span><b>→</b></button>
+      </form>
+
+      <button class="sample-button" id="sample-button" type="button">Try central London example</button>
+      <p class="small-print">Screening evidence, not planning, legal, ecological or investment advice.</p>
+    </aside>
+
+    <section class="workspace">
+      <div class="map-wrap">
+        <div id="map" aria-label="Interactive map of selected site"></div>
+        <div class="map-hint" id="map-hint"><span>⌖</span> Click anywhere to select a site</div>
+      </div>
+
+      <section id="empty-state" class="empty-state">
+        <div class="empty-icon">⌖</div>
+        <div><h2>Start with a location</h2><p>Use a postcode, address or map point to create a quick site screen.</p></div>
+      </section>
+
+      <section id="dashboard" class="dashboard" hidden aria-live="polite">
+        <div class="result-heading">
+          <div><p class="eyebrow">Site screen</p><h2 id="result-title">Selected site</h2><p id="result-subtitle"></p></div>
+          <span class="status-chip" id="source-status">Loading</span>
+        </div>
+        <div class="metrics" id="metrics"></div>
+        <div class="dashboard-grid">
+          <article class="card span-two"><div class="card-title"><h3>Recommended next checks</h3><span>Evidence-led</span></div><div id="suggestions" class="suggestion-list"></div></article>
+          <article class="card"><div class="card-title"><h3>Site constraints</h3><span id="constraint-count"></span></div><div id="constraints" class="stack-list"></div></article>
+          <article class="card"><div class="card-title"><h3>Comparable permissions</h3><span id="permission-count"></span></div><div id="permissions" class="case-list"></div></article>
+          <article class="card"><div class="card-title"><h3>Comparable refusals</h3><span id="refusal-count"></span></div><div id="refusals" class="case-list"></div></article>
+          <article class="card"><div class="card-title"><h3>Borough policy evidence</h3><span id="policy-count"></span></div><div id="policy-evidence" class="stack-list"></div></article>
+          <article class="card"><div class="card-title"><h3>Data to verify</h3><span id="gap-count"></span></div><div id="data-gaps" class="stack-list"></div></article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="alert" hidden></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="/app.js?v=map-fix-1"></script>
+</body>
+</html>

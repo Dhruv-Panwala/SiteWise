@@ -46,13 +46,7 @@ Then activate the environment again.
 
 ```powershell
 python -m pip install --upgrade pip
-pip install pandas pyarrow duckdb shapely requests python-dotenv rapidfuzz pypdf huggingface_hub
-```
-
-Optional model/retrieval packages:
-
-```powershell
-pip install scikit-learn sentence-transformers
+pip install -r requirements.txt
 ```
 
 ### 4. Create local configuration
@@ -65,13 +59,93 @@ Open `.env` and set `HF_TOKEN` plus `HF_MODEL` when enabling report generation. 
 
 ### 5. Check the supplied CSV
 
-The default `.env` expects the CSV at the project root. Confirm it exists:
+The default `.env` expects the CSV under `Data/raw`. Confirm it exists:
 
 ```powershell
-Test-Path .\foundations_london_housing_2022_2025_20260810T013626Z.csv
+Test-Path .\Data\raw\foundations_london_housing_2022_2025_20260810T013626Z.csv
 ```
 
 If the file is stored elsewhere, change `PLANNING_CSV` in `.env` to its path.
+
+## Run the first MVP
+
+## Run the map demo
+
+Start the local SiteWise demo:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_demo.py
+```
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The interface supports UK
+postcode/address search, map-point selection, a development description and a
+source-linked dashboard for comparable permissions/refusals, site constraints,
+local-plan evidence and checks to verify. It calls deterministic SiteWise evidence
+only; it does not call the LLM or load `.env`.
+
+### Check GLA Local Plan retrieval first
+
+This standalone command calls the public ArcGIS services, cleans matching records,
+and reports layer coverage without loading `.env`, the planning CSV or an LLM:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/check_gla.py --lat 51.5074 --lon -0.1278 --authority Westminster
+```
+
+Omit `--authority` to check the extents of all 35 published borough/development
+corporation services and query candidate layers. An extent is a search filter,
+not a borough boundary. The first run takes longer; responses are cached for a
+day. Use `--refresh` to refresh them. No API key or GeoPackage download is needed.
+
+The JSON has `findings` (cleaned spatial matches), `layers` (query audit),
+`services` (routing audit), and `coverage_gaps` (unknown/missing categories).
+Duplicate features are combined with their contributing IDs. Geometry and GIS
+bookkeeping fields remain in the response cache rather than the cleaned findings.
+`confirmed` means the point intersects a published polygon; legal currency is
+explicitly unverified. A complete query does not mean complete constraint coverage.
+
+To include this connector in the full deterministic pipeline without reading `.env`:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/run_mvp.py --lat 51.5074 --lon -0.1278 --description "Rear extension" --gla --no-llm --no-env-file
+```
+
+For normal application runs, `ENABLE_GLA_ARCGIS=true` enables the connector. This
+setting is independent of the national `ENABLE_LIVE_CONSTRAINTS` setting. Copy
+individual settings from `.env.example` yourself; do not overwrite an existing `.env`.
+
+See [GLA integration details](Docs/GLA_ARCGIS.md) for data contracts and limitations.
+
+Prepare the cleaned application table and TF-IDF comparable-case index:
+
+```powershell
+python scripts/prepare_data.py
+```
+
+Run deterministic retrieval for a site. The command returns constraints, nearby applications, similar applications, historical outcome summaries, data-quality warnings and sources as JSON:
+
+```powershell
+python scripts/run_mvp.py `
+  --lat 51.5074 `
+  --lon -0.1278 `
+  --description "Redevelopment of an existing house with a rear extension and two new homes" `
+  --top-n 5
+```
+
+Live Planning Data API constraint queries are disabled by default so the MVP remains fast and deterministic. To enable them for a run:
+
+```powershell
+$env:ENABLE_LIVE_CONSTRAINTS = 'true'
+python scripts/run_mvp.py --lat 51.5074 --lon -0.1278 --description "Rear extension"
+```
+
+Without `HF_TOKEN`, the evidence package is still produced and the LLM field reports `not_configured`.
+
+Run the tests:
+
+```powershell
+python -m pytest tests -q
+```
 
 ### 6. Verify Python imports
 
