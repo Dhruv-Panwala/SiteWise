@@ -143,7 +143,10 @@ def create_app(root: Path = ROOT, demo: SiteWiseDemo | None = None) -> Flask:
     @app.get("/api/health")
     def health():
         settings = getattr(demo, "settings", None)
-        return jsonify({"status": "ok", "service": "SiteWise UK demo", "llm_enabled": bool(settings and settings.enable_llm_reports and settings.hf_token)})
+        return jsonify({"status": "ok", "service": "SiteWise UK demo",
+                        "backend_version": "council-live-flags-v1",
+                        "live_constraints_enabled": bool(settings and settings.enable_live_constraints),
+                        "llm_enabled": bool(settings and settings.enable_llm_reports and settings.hf_token)})
 
     @app.post("/api/explain")
     def explain():

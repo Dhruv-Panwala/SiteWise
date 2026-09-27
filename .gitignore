@@ -5,6 +5,13 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
 
 # Local configuration and secrets
 .env
@@ -12,6 +19,8 @@ __pycache__/
 !.env.example
 config/field_encryption_key
 config/secret_key
+/config/codex.toml
+/config/cache/
 
 # Large or generated data
 data/raw/
@@ -23,7 +32,11 @@ Data/cache/
 Data/processed/
 *.gpkg
 *.parquet
+*.joblib
+*.npz
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal
 *.db
 *.zip
 
@@ -34,11 +47,22 @@ foundations_london_housing_2022_2025_20260810T013626Z.csv
 *.log
 reports/generated/
 
+# Private presentation builds and generated exports; keep curated deliverables/.
+/.presentation-build/
+/.pptx-build/
+/.codex-finalizer/
+/output/
+
+# OS/editor temporary files
+.DS_Store
+Thumbs.db
+Desktop.ini
+~$*
+
 # Cloned legacy projects are local references, not application dependencies.
 references/
-.env.example
+# Local planning notes; the current project overview lives in README.md.
 data_setup.md
-LEGACY_REUSE.md
-config/codex.toml
 Docs/plan.md
-.pptx-build
+Docs
+LEGACY_REUSE.md

@@ -1,247 +1,108 @@
 # SiteWise UK
 
-SiteWise UK is a map-first planning and property screening tool. A user selects a site and receives a source-linked view of planning history, local-plan constraints, environmental flags, similar applications and recommended next checks.
+SiteWise UK helps property buyers, homeowners and developers investigate planning considerations before committing to a site or design. Select a map location or search for an address, describe a proposal, and review council guidance alongside spatial constraints and historical applications.
 
-The first prototype uses direct public APIs for local-plan and national constraint data. It does **not** require downloading all London Local Plan GeoPackages.
+Built for House London #2 Data Hackathon. The idea grew from a real property search where a protected tree complicated the proposed building layout.
 
-## Run the council-guidance demo
+## What it does
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe scripts\run_demo.py --prompt-hf-token
-```
+- Finds nearby planning applications and ranks comparable descriptions using TF-IDF and cosine similarity.
+- Checks available planning layers using geometric intersections.
+- Retrieves relevant passages from official council webpages and PDFs, with source links.
+- Presents design checks, evidence and missing information in a map dashboard.
+- Optionally generates a cited explanation through Hugging Face after evidence retrieval.
 
-Enter your Hugging Face token at the hidden prompt, then open http://127.0.0.1:8000.
-The token lives only in that process. The web demo **never reads or writes `.env`**.
-Omit `--prompt-hf-token` to run without AI. Model/provider defaults are Phi-4-mini-instruct
-and featherless-ai; provider access/credits are still required. Set process variables
-`HF_MODEL` / `HF_PROVIDER` to change them. `.env.example` documents all settings but
-is not automatically loaded by the web server. Restart the server after code changes.
+Council-text coverage currently includes **Wandsworth, Westminster and Lambeth**, plus selected London-wide policies. The interface accepts UK locations, but data and policy coverage are not UK-wide.
 
-Try map point **51.47914, -0.16682**, proposal **rear extension and two new homes**.
-The demo now returns council passages and source-based design checks before requesting
-an AI explanation. Open “Read the council evidence” for the actual extract, PDF page,
-document-age warning and source. Missing AI credentials do not prevent policy retrieval.
+## Quick start
 
-Current policy-text pilot: **Wandsworth, Westminster and Lambeth**, plus selected
-London-wide policies. This is not UK-wide policy coverage or a complete Local Plan
-assessment. Unsupported councils, changed documents and unavailable sources are explicit.
-Boundary lookup verifies an administrative district, not special development-corporation
-jurisdiction. An old SPD must not be treated as current legislation. Tree policy does
-not establish the presence or protected status of any particular tree.
-
-The explanation uses a bounded context, inline evidence IDs and a citation-ID check.
-This checks citation existence, not whether every sentence is legally/semantically correct.
-Reports with missing policy citations, empty output or provider failure are not shown as
-successful reports. Truncated responses are labelled incomplete. Screens expire after
-30 minutes; only 16 are retained in memory. This unauthenticated server is a local demo,
-not a public deployment.
-
-```powershell
-# Public-source diagnostic: does not read .env or use an LLM
-.\.venv\Scripts\python.exe scripts\check_policies.py
-.\.venv\Scripts\python.exe -m pytest tests -q
-```
-
-See [Docs/COUNCIL_POLICY.md](Docs/COUNCIL_POLICY.md) for retrieval and report design.
-
-## Current data sources
-
-- Supplied London planning application CSV: `foundations_london_housing_2022_2025_20260810T013626Z.csv`
-- GLA Local Plan ArcGIS FeatureServer services: https://data.london.gov.uk/dataset/planning-local-plan-data-2zjmn
-- Planning Data API: https://www.planning.data.gov.uk/docs
-- Planning London Datahub: https://planninglondondatahub.london.gov.uk/
-- Hugging Face Inference Providers for the optional cited report: https://huggingface.co/docs/inference-providers
-- Optional later Forest MCP area-context indicators
-
-Read [data_setup.md](data_setup.md) for data contracts, API query patterns, caching, provenance and validation rules.
-
-## Environment setup (Windows PowerShell)
-
-### 1. Prerequisites
-
-Install:
-
-- Python 3.11 or newer
-- Git
-- A modern browser
-
-### 2. Create and activate a virtual environment
-
-From the project directory:
+Requires Python 3.11+ and the supplied planning CSV. From the project folder in PowerShell:
 
 ```powershell
 py -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-If PowerShell blocks activation for the current user, run this once in a PowerShell window with appropriate permissions:
+Place `foundations_london_housing_2022_2025_20260810T013626Z.csv` in `Data/raw/`. The dataset is not included in Git. The server prepares the searchable dataset on the first screen if needed.
+
+Start the website with live national constraint queries:
 
 ```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+.\.venv\Scripts\python.exe scripts\run_demo.py --live-constraints
 ```
 
-Then activate the environment again.
+Open **http://127.0.0.1:8000**. Click **Try central London example**, review the proposal and choose **Screen this site**. The GLA checkbox separately controls local-plan layer queries. Initial retrieval can take longer while data and caches are prepared.
 
-### 3. Install dependencies
+### Optional AI explanation
 
 ```powershell
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+.\.venv\Scripts\python.exe scripts\run_demo.py --live-constraints --prompt-hf-token
 ```
 
-### 4. Create local configuration
+Enter a Hugging Face token at the hidden prompt. It is kept in the server process, not saved to a file. The default model/provider are `microsoft/Phi-4-mini-instruct` and `featherless-ai`; inference requires supported provider access and any applicable credits. Council guidance remains usable if AI is unavailable.
+
+**The web server and terminal demo do not read `.env`.** Configure them with startup flags or environment variables in the same terminal. [`.env.example`](.env.example) documents the available settings.
+
+For example, if the CSV is elsewhere:
 
 ```powershell
-Copy-Item .env.example .env
+$env:PLANNING_CSV = 'C:\path\to\planning.csv'
 ```
 
-Open `.env` and set `HF_TOKEN` plus `HF_MODEL` when enabling report generation. Hugging Face is the planned hackathon LLM provider. The GLA ArcGIS and Planning Data APIs are public read-only sources and do not need keys for the prototype.
+To change inference settings, set `HF_MODEL` and `HF_PROVIDER` before starting the server. Restart after code or configuration changes.
 
-### 5. Check the supplied CSV
+### Verify the running server
 
-The default `.env` expects the CSV under `Data/raw`. Confirm it exists:
+Visit **http://127.0.0.1:8000/api/health**. With `--live-constraints`, `live_constraints_enabled` should be `true`.
 
-```powershell
-Test-Path .\Data\raw\foundations_london_housing_2022_2025_20260810T013626Z.csv
-```
+If another server already uses port 8000, add `--port 8001` and open the matching URL. Rerun the site screen after restarting; existing results do not refresh automatically.
 
-If the file is stored elsewhere, change `PLANNING_CSV` in `.env` to its path.
-
-## Run the first MVP
-
-## Run the map demo
-
-Start the local SiteWise demo:
-
-```powershell
-.\.venv\Scripts\python.exe scripts\run_demo.py
-```
-
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The interface supports UK
-postcode/address search, map-point selection, a development description and a
-source-linked dashboard for comparable permissions/refusals, site constraints,
-local-plan evidence and checks to verify. It calls deterministic SiteWise evidence
-only; it does not call the LLM or load `.env`.
-
-### Check GLA Local Plan retrieval first
-
-This standalone command calls the public ArcGIS services, cleans matching records,
-and reports layer coverage without loading `.env`, the planning CSV or an LLM:
-
-```powershell
-.\.venv\Scripts\python.exe scripts/check_gla.py --lat 51.5074 --lon -0.1278 --authority Westminster
-```
-
-Omit `--authority` to check the extents of all 35 published borough/development
-corporation services and query candidate layers. An extent is a search filter,
-not a borough boundary. The first run takes longer; responses are cached for a
-day. Use `--refresh` to refresh them. No API key or GeoPackage download is needed.
-
-The JSON has `findings` (cleaned spatial matches), `layers` (query audit),
-`services` (routing audit), and `coverage_gaps` (unknown/missing categories).
-Duplicate features are combined with their contributing IDs. Geometry and GIS
-bookkeeping fields remain in the response cache rather than the cleaned findings.
-`confirmed` means the point intersects a published polygon; legal currency is
-explicitly unverified. A complete query does not mean complete constraint coverage.
-
-To include this connector in the full deterministic pipeline without reading `.env`:
-
-```powershell
-.\.venv\Scripts\python.exe scripts/run_mvp.py --lat 51.5074 --lon -0.1278 --description "Rear extension" --gla --no-llm --no-env-file
-```
-
-For normal application runs, `ENABLE_GLA_ARCGIS=true` enables the connector. This
-setting is independent of the national `ENABLE_LIVE_CONSTRAINTS` setting. Copy
-individual settings from `.env.example` yourself; do not overwrite an existing `.env`.
-
-See [GLA integration details](Docs/GLA_ARCGIS.md) for data contracts and limitations.
-
-Prepare the cleaned application table and TF-IDF comparable-case index:
-
-```powershell
-python scripts/prepare_data.py
-```
-
-Run deterministic retrieval for a site. The command returns constraints, nearby applications, similar applications, historical outcome summaries, data-quality warnings and sources as JSON:
-
-```powershell
-python scripts/run_mvp.py `
-  --lat 51.5074 `
-  --lon -0.1278 `
-  --description "Redevelopment of an existing house with a rear extension and two new homes" `
-  --top-n 5
-```
-
-Live Planning Data API constraint queries are disabled by default so the MVP remains fast and deterministic. To enable them for a run:
+## Terminal demo
 
 ```powershell
 $env:ENABLE_LIVE_CONSTRAINTS = 'true'
-python scripts/run_mvp.py --lat 51.5074 --lon -0.1278 --description "Rear extension"
+.\.venv\Scripts\python.exe scripts\demo_terminal.py --gla --prompt-hf-token
 ```
 
-Without `HF_TOKEN`, the evidence package is still produced and the LLM field reports `not_configured`.
+This prints the central London example, council passages, source links and historical evidence before requesting an AI explanation. Omit `--prompt-hf-token` if you do not want to enter a token.
 
-Run the tests:
+## Data sources
+
+| Source | Role |
+| --- | --- |
+| Supplied London planning CSV, 2022–2025 | Historical descriptions, decisions and coordinates |
+| [GLA Planning Local Plan Data](https://data.london.gov.uk/dataset/planning-local-plan-data-2zjmn) | Public ArcGIS spatial layers |
+| [Planning Data](https://www.planning.data.gov.uk/) | Administrative boundaries and optional constraint queries |
+| Official council webpages/PDFs and selected London Plan chapters | Proposal-relevant policy passages |
+| [Postcodes.io](https://postcodes.io/) and [OpenStreetMap](https://www.openstreetmap.org/copyright) | Postcode lookup, address search and basemap |
+
+The implementation queries public spatial services without downloading all GeoPackages. Exact council sources are listed in [sitewise/policy_sources.py](sitewise/policy_sources.py).
+
+## Previous project credits
+
+- **[0-the-spike](https://github.com/house-london/0-the-spike):** adapted the comparable-application retrieval approach to the supplied CSV.
+- **[ConfidentPlanner](https://github.com/athuler/ConfidentPlanner):** implementation reference for spatial checks and nearby applications.
+- **[0-RIBS](https://github.com/house-london/0-RIBS):** implementation reference for validation and caching.
+
+Reference-only concepts are independently implemented where licensing prevents copying. The MVP does not import legacy approval models, restricted datasets or hard-coded credentials. See [LEGACY_REUSE.md](LEGACY_REUSE.md).
+
+## Development
 
 ```powershell
-python -m pytest tests -q
+.\.venv\Scripts\python.exe -m pytest tests -q
 ```
 
-### 6. Verify Python imports
+- `sitewise/`: retrieval, spatial checks, policy extraction, explanations and Flask API.
+- `web/`: map dashboard.
+- `scripts/`: launchers and data/source diagnostics.
+- `tests/`: automated tests.
 
-```powershell
-python -c "import pandas, pyarrow, duckdb, shapely, requests, dotenv; print('Python data environment OK')"
-```
+Council sources and spatial integration live in `sitewise/policy_sources.py`, `sitewise/policies.py` and `sitewise/arcgis.py`. Local datasets, caches, cloned references and generated presentation outputs stay outside version control.
 
-### 7. Verify the GLA ArcGIS service
+## Limitations
 
-This checks that the public service is reachable. The layer IDs will be discovered by the application rather than hard-coded.
+Source coverage and currency vary. No result does not establish that a constraint is absent. A point intersection is not a full plot or tree-root assessment, and an administrative boundary does not resolve every special planning authority.
 
-```powershell
-$service = 'https://services.arcgis.com/drifeOPKLpgnJ8Qa/arcgis/rest/services/planning_local_plan_data_07/FeatureServer?f=pjson'
-Invoke-RestMethod $service | Select-Object currentVersion, serviceDescription, layers, tables
-```
+Historical outcomes and similarity scores do not predict permission. AI citation checks verify reference IDs, not the correctness of every claim. Confirm current council requirements and seek professional advice before making planning or investment decisions.
 
-### 8. Verify the Planning Data API
-
-```powershell
-$url = 'https://www.planning.data.gov.uk/entity.json?latitude=51.5074&longitude=-0.1278&dataset=conservation-area&limit=5'
-Invoke-RestMethod $url | Select-Object -ExpandProperty entities
-```
-
-### 9. Create local working directories
-
-```powershell
-New-Item -ItemType Directory -Force .\data\cache\arcgis_local_plan | Out-Null
-New-Item -ItemType Directory -Force .\data\cache\planning_data_api | Out-Null
-New-Item -ItemType Directory -Force .\data\cache\geocoding | Out-Null
-New-Item -ItemType Directory -Force .\data\processed | Out-Null
-```
-
-## How the application will query data
-
-```text
-User selects site
-    ↓
-Resolve postcode/address and borough
-    ↓
-Call borough ArcGIS FeatureServer for intersecting local-plan layers
-    ↓
-Call Planning Data API for national constraints
-    ↓
-Search the cleaned planning CSV for nearby comparable cases
-    ↓
-Retrieve official policy evidence
-    ↓
-Generate a cited LLM report
-```
-
-The backend should cache responses, use timeouts and preserve each source URL and retrieval timestamp. The frontend should receive one combined site-analysis response rather than calling external APIs directly.
-
-## Important limitations
-
-- Public API access is suitable for the hackathon but is not an unlimited production guarantee.
-- GLA local-plan coverage and synchronisation vary by borough.
-- Empty API results must be reported as “no result found in this source,” not proof that no constraint exists.
-- The tool is a screening aid, not planning, legal, ecological or investment advice.
+This is a local, unauthenticated hackathon demo, not a production service or a substitute for a planning decision.

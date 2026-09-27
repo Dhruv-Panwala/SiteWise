@@ -29,3 +29,24 @@ def test_demo_returns_clear_validation_error():
     response = app.test_client().post("/api/analyze", json={"latitude": "bad", "longitude": -0.1, "description": "house"})
     assert response.status_code == 400
     assert "valid location" in response.json["error"]
+
+
+def test_live_constraint_startup_flag_and_health(monkeypatch, capsys):
+    from scripts import run_demo
+    from sitewise.config import Settings
+    monkeypatch.setenv('ENABLE_LIVE_CONSTRAINTS', 'false')
+    monkeypatch.setattr('sys.argv', ['run_demo.py', '--live-constraints', '--port', '8001'])
+    observed = {}
+    class Server:
+        def run(self, **kwargs):
+            observed.update(kwargs)
+    def fake_create_app(*, demo):
+        observed['health'] = create_app(demo=demo).test_client().get('/api/health').json
+        return Server()
+    monkeypatch.setattr(run_demo, 'create_app', fake_create_app)
+    assert run_demo.main() == 0
+    assert observed['port'] == 8001
+    assert observed['health']['live_constraints_enabled'] is True
+    assert 'constraints: ENABLED' in capsys.readouterr().out
+    monkeypatch.setenv('ENABLE_LIVE_CONSTRAINTS', ' true  ')
+    assert Settings.from_env(load_env_file=False).enable_live_constraints is True

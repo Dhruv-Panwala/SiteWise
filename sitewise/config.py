@@ -51,7 +51,7 @@ class Settings:
             processed_dir=_path(os.getenv("PROCESSED_DIR"), root, "data/processed"),
             cache_dir=_path(os.getenv("CACHE_DIR"), root, "data/cache"),
             planning_data_api=os.getenv("PLANNING_DATA_API", "https://www.planning.data.gov.uk/entity.json"),
-            enable_live_constraints=os.getenv("ENABLE_LIVE_CONSTRAINTS", "false").lower() in {"1", "true", "yes"},
+            enable_live_constraints=os.getenv("ENABLE_LIVE_CONSTRAINTS", "false").strip().lower() in {"1", "true", "yes"},
             request_timeout_seconds=int(os.getenv("REQUEST_TIMEOUT_SECONDS", "20")),
             cache_ttl_seconds=int(os.getenv("CACHE_TTL_SECONDS", "86400")),
             constraint_geojson_dir=_path(os.getenv("CONSTRAINT_GEOJSON_DIR"), root, "data/raw/constraints"),
